@@ -509,14 +509,7 @@
 
                 <div class="form-divider">admin credentials</div>
 
-                {{-- Admin hint --}}
-                <div class="admin-hint">
-                    <span class="admin-hint-icon">💡</span>
-                    <div>
-                        <p>Default Admin Account</p>
-                        <p>admin@leavease.com &nbsp;·&nbsp; admin1234</p>
-                    </div>
-                </div>
+              
 
             </form>
         </div>
