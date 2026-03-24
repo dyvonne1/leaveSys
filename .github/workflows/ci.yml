@@ -2,50 +2,72 @@ name: Laravel CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   laravel-tests:
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: leave_system
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.3'
-        extensions: mbstring, intl, pdo_mysql
-        coverage: none
+      - name: 🐘 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.2
+          extensions: mbstring, bcmath, pdo_mysql
+          coverage: none
 
-    - name: Copy .env
-      run: cp .env.example .env
+      - name: 📦 Install Composer dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
 
-    - name: Install Composer Dependencies
-      run: composer install --no-progress --prefer-dist --optimize-autoloader
+      - name: 📄 Copy .env
+        run: cp .env.example .env
 
-    - name: Generate Application Key
-      run: php artisan key:generate
+      - name: 🔑 Generate Key
+        run: php artisan key:generate
 
-    - name: Setup SQLite Database
-      run: |
-        mkdir -p database
-        touch database/database.sqlite
-        php artisan migrate --force
+      - name: 🕒 Wait for MySQL to be ready
+        run: |
+          for i in {1..15}; do
+            mysqladmin ping -h 127.0.0.1 -uroot -proot && break
+            echo "⏳ Waiting for MySQL..."
+            sleep 2
+          done
 
-    - name: Run Tests
-      run: php artisan test --parallel
+      - name: 🧱 Run migrations
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: leave_system
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: php artisan migrate --force
 
-    - name: Install Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Install NPM Dependencies
-      run: npm install
-
-    - name: Build Frontend
-      run: npm run build
+      - name: 🧪 Run Tests
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: leave_system
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: php artisan test
